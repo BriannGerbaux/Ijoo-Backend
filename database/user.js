@@ -2,6 +2,7 @@ const client = require('./connect');
 const jwt = require("jsonwebtoken");
 
 const userCollection = client.db("ijoo-db").collection("users");
+const cartCollection = client.db("ijoo-db").collection("carts");
 const config = process.env;
 
 const verifyToken = (req, res, next) => {
@@ -24,13 +25,7 @@ const get = async (email) => {
     try {
         var obj = { "email": email };
         var res = await userCollection.findOne(obj);
-        return {
-            id: res._id,
-            username: res.username,
-            email: res.email,
-            passwordHash: res.password_hash
-
-        }
+        return res;
     } catch (error) {
         throw error;
     }
@@ -38,9 +33,22 @@ const get = async (email) => {
 
 const create = async (username, email, passwordHash) => {
     try {
-        var obj = {"username": username, "email": email, "password_hash": passwordHash};
+        var cart = await cartCollection.insertOne({"item_number": 0, items: []})
+        console.log(cart);
+        var obj = {
+            "username": username,
+            "email": email,
+            "password_hash": passwordHash,
+            "cart_id": cart.insertedId
+        };
         var res = await userCollection.insertOne(obj);
-        console.log("Inserted 1 user");
+        console.log(res);
+        await cartCollection.updateOne({"_id": cart.insertedId},
+        {
+            $set: {
+                "user_id": res.insertedId
+            }
+        })
     } catch(error) {
         console.log(error);
         throw error;

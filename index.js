@@ -2,7 +2,9 @@ require("dotenv").config();
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require("jsonwebtoken");
-const user = require("./database/User");
+const user = require("./database/user");
+const travels = require("./database/travels");
+const cart = require("./database/cart");
 
 const app = express();
 const port = 3000
@@ -47,10 +49,10 @@ app.get('/login', async (req, res, next) => {
 
         const userObj = await user.get(email);
 
-        if (userObj && (await bcrypt.compare(password, userObj.passwordHash))) {
+        if (userObj && (await bcrypt.compare(password, userObj.password_hash))) {
             const token = jwt.sign(
             {
-                user_id: userObj.id,
+                user_id: userObj._id,
                 email,
             },
             process.env.TOKEN_KEY,
@@ -66,6 +68,66 @@ app.get('/login', async (req, res, next) => {
         return next(error);
     }
 });
+
+app.get('/travels', async(req, res, next) => {
+    try {
+        const environment = req.query.environment;
+        const maximumPrice = req.query.maximumPrice;
+        const region = req.query.region;
+        const query = req.query.query;
+        console.log(`${environment} ${maximumPrice} ${region} ${query}`);
+        const items = await travels.get(environment, maximumPrice, region, query);
+        console.log(items);
+        res.status(200).json(items);
+    } catch (error) {
+        console.log(error);
+        next(error);
+    }
+});
+
+app.get('/travels/:id', async(req, res, next) => {
+    try {
+        if (req.params.id.length == 24) {
+            const travelsObj = await travels.getById(req.params.id);
+            res.status(200).json(travelsObj);
+        } else {
+            res.status(400).send("Travel id is invalid");
+        }
+    } catch (error) {
+        console.log(error);
+        next(error);
+    }
+});
+
+app.get('/user/cart', user.verifyToken, async(req, res, next) => {
+    try {
+        const userObj = await cart.get(req.user.email);
+        res.status(200).json(userObj);
+    } catch (error) {
+        console.log(error);
+        next(error);
+    }
+});
+
+app.delete('/user/cart/item', user.verifyToken, async(req, res, next) => {
+    try {
+        await cart.remove(req.user.email, req.body.travel_id);
+        res.status(200).send("Successfully removed");
+    } catch (error) {
+        console.log(error);
+        next(error);
+    }
+})
+
+app.post('/user/cart/item', user.verifyToken, async(req, res, next) => {
+    try {
+        await cart.add(req.user.email, req.body.travel_id);
+        res.status(200).send("Successfully sent");
+    } catch (error) {
+        console.log(error);
+        next(error);
+    }
+})
 
 app.post("/welcome", user.verifyToken, (req, res) => {
     res.status(200).send("Welcome 🙌 ");
