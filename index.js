@@ -2,6 +2,8 @@ require("dotenv").config();
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require("jsonwebtoken");
+const cors = require('cors');
+
 const user = require("./database/user");
 const travels = require("./database/travels");
 const cart = require("./database/cart");
@@ -10,6 +12,7 @@ const app = express();
 const port = 3000
 
 //app.use(express.json());
+app.use(cors())
 app.use(express.urlencoded());
 
 app.post('/register', async (req, res, next) => {
